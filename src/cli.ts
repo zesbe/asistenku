@@ -42,6 +42,7 @@ program
   .option('-a, --agent <name>', 'Use specific agent configuration')
   .option('--cwd <path>', 'Set working directory')
   .option('--json', 'Output in streaming JSON format')
+  .option('--tui', 'Use Ink TUI (fancy but requires yoga.wasm, not available in single-binary)')
   .action(async (promptParts, opts) => {
     const cwd = opts.cwd || process.cwd()
     const config = await loadConfig(cwd)
@@ -132,13 +133,47 @@ program
       }
     }
 
-    // Lazy load Ink + React to avoid yoga.wasm for non-TUI commands
-    const [{ render }, { default: React }, { default: App }] = await Promise.all([
-      import('ink'),
-      import('react'),
-      import('./tui/App'),
-    ])
-    render(React.createElement(App, { session, initialInput, agent: opts.agent }))
+    // Lazy load Ink + React only when --tui explicitly requested
+    if (opts.tui) {
+      try {
+        const [{ render }, { default: React }, { default: App }] = await Promise.all([
+          import('ink'),
+          import('react'),
+          import('./tui/App'),
+        ])
+        render(React.createElement(App, { session, initialInput, agent: opts.agent }))
+        return
+      } catch (err: any) {
+        console.error(chalk.red(`Ink TUI failed: ${err.message}`))
+        console.error(chalk.yellow('Falling back to REPL mode...'))
+      }
+    }
+
+    // Default: REPL mode (no wasm deps, works in standalone binary)
+    const { startRepl } = await import('./tui/repl')
+    if (initialInput) {
+      // Run one message then enter REPL
+      const { runAgent } = await import('./agent/loop')
+      process.stdout.write(chalk.green.bold('asistenku: '))
+      try {
+        await runAgent({
+          session,
+          userMessage: initialInput,
+          config,
+          agentName: opts.agent,
+          onEvent: (ev) => {
+            if (ev.type === 'text-delta') process.stdout.write(ev.data)
+            else if (ev.type === 'tool-call-start')
+              process.stdout.write(chalk.yellow(`\n  ⚙ ${ev.data.toolName}\n  `))
+            else if (ev.type === 'error') console.error(chalk.red(`\n✗ ${ev.data}`))
+          },
+        })
+        console.log('\n')
+      } catch (err: any) {
+        console.error(chalk.red(`\n✗ ${err.message}`))
+      }
+    }
+    await startRepl({ session, config, agent: opts.agent })
   })
 
 // =============================================================================
