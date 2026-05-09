@@ -14,6 +14,7 @@ export type ProviderId =
   | 'ollama'
   | 'openrouter'
   | 'groq'
+  | 'z-ai'
   | 'custom'
 
 export interface ProviderConfig {

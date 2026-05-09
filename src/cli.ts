@@ -90,22 +90,49 @@ program
 
     const initialInput = promptParts.length ? promptParts.join(' ') : undefined
 
-    // Connect MCP servers if configured
-    if (config.mcpServers && Object.keys(config.mcpServers).length > 0) {
-      const { connectAllServers } = await import('./mcp')
-      await connectAllServers(config.mcpServers)
+    // Non-interactive / headless mode — skip Ink TUI
+    if (opts.interactive === false || opts.json) {
+      if (!initialInput) {
+        console.error(chalk.red('--no-interactive requires initial prompt'))
+        process.exit(1)
+      }
+      const { runAgent } = await import('./agent/loop')
+      try {
+        const result = await runAgent({
+          session,
+          userMessage: initialInput,
+          config,
+          agentName: opts.agent,
+          onEvent: (ev) => {
+            if (opts.json) {
+              console.log(JSON.stringify(ev))
+            } else if (ev.type === 'text-delta') {
+              process.stdout.write(ev.data)
+            } else if (ev.type === 'tool-call-start') {
+              console.error(chalk.yellow(`\n[tool] ${ev.data.toolName}`))
+            } else if (ev.type === 'tool-result') {
+              // silent in text mode
+            } else if (ev.type === 'error') {
+              console.error(chalk.red(`\n✗ ${ev.data}`))
+            }
+          },
+        })
+        if (!opts.json) {
+          console.log()
+          console.error(
+            chalk.gray(
+              `\n[${result.tokens} tokens, ${result.cost.toFixed(4)}]`
+            )
+          )
+        }
+        process.exit(0)
+      } catch (err: any) {
+        console.error(chalk.red(`\n✗ ${err.message}`))
+        process.exit(1)
+      }
     }
 
-    // Load hooks
-    if (config.hooks) {
-      const { loadHooksFromConfig } = await import('./hooks')
-      loadHooksFromConfig(config.hooks)
-    }
-
-    // Activate plugins
-    const { activateAllPlugins } = await import('./plugins')
-    await activateAllPlugins(cwd)
-
+    // Lazy load Ink + React to avoid yoga.wasm for non-TUI commands
     const [{ render }, { default: React }, { default: App }] = await Promise.all([
       import('ink'),
       import('react'),

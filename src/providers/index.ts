@@ -165,6 +165,68 @@ export const MODEL_CATALOG: Record<ProviderId, ModelInfo[]> = {
       supportsStreaming: true,
     },
   ],
+  'z-ai': [
+    {
+      id: 'glm-4.5-flash',
+      name: 'GLM-4.5 Flash (free)',
+      contextWindow: 128_000,
+      maxOutput: 8_192,
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+    {
+      id: 'glm-4.6',
+      name: 'GLM-4.6',
+      contextWindow: 200_000,
+      maxOutput: 32_000,
+      inputCostPer1M: 0.6,
+      outputCostPer1M: 2.2,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+    {
+      id: 'glm-4.5',
+      name: 'GLM-4.5',
+      contextWindow: 128_000,
+      maxOutput: 16_000,
+      inputCostPer1M: 0.5,
+      outputCostPer1M: 2,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+    {
+      id: 'glm-4.5-air',
+      name: 'GLM-4.5 Air',
+      contextWindow: 128_000,
+      maxOutput: 8_192,
+      inputCostPer1M: 0.2,
+      outputCostPer1M: 1.1,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+    {
+      id: 'glm-4.7',
+      name: 'GLM-4.7',
+      contextWindow: 200_000,
+      maxOutput: 32_000,
+      inputCostPer1M: 1,
+      outputCostPer1M: 4,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+    {
+      id: 'glm-5',
+      name: 'GLM-5',
+      contextWindow: 256_000,
+      maxOutput: 64_000,
+      inputCostPer1M: 2,
+      outputCostPer1M: 8,
+      supportsTools: true,
+      supportsStreaming: true,
+    },
+  ],
   custom: [],
 }
 
@@ -203,13 +265,13 @@ export function getModel(provider: ProviderId, modelId: string, config: Config):
       return client(modelId)
     }
     case 'ollama': {
-      // Ollama uses OpenAI-compatible API
+      // Ollama uses OpenAI-compatible API (chat completions)
       const baseURL = providerConfig?.baseURL || 'http://localhost:11434/v1'
       const client = createOpenAI({
-        apiKey: 'ollama', // Placeholder, not used by Ollama
+        apiKey: 'ollama',
         baseURL,
       })
-      return client(modelId)
+      return client.chat(modelId) as any
     }
     case 'openrouter': {
       const apiKey = providerConfig?.apiKey || process.env.OPENROUTER_API_KEY
@@ -218,7 +280,7 @@ export function getModel(provider: ProviderId, modelId: string, config: Config):
         apiKey,
         baseURL: providerConfig?.baseURL || 'https://openrouter.ai/api/v1',
       })
-      return client(modelId)
+      return client.chat(modelId) as any
     }
     case 'groq': {
       const apiKey = providerConfig?.apiKey || process.env.GROQ_API_KEY
@@ -227,7 +289,16 @@ export function getModel(provider: ProviderId, modelId: string, config: Config):
         apiKey,
         baseURL: 'https://api.groq.com/openai/v1',
       })
-      return client(modelId)
+      return client.chat(modelId) as any
+    }
+    case 'z-ai': {
+      const apiKey = providerConfig?.apiKey || process.env.ZAI_API_KEY || process.env.Z_AI_API_KEY
+      if (!apiKey) throw new Error('ZAI_API_KEY not set')
+      const client = createOpenAI({
+        apiKey,
+        baseURL: providerConfig?.baseURL || 'https://api.z.ai/api/paas/v4',
+      })
+      return client.chat(modelId) as any
     }
     case 'custom': {
       if (!providerConfig?.baseURL) throw new Error('Custom provider requires baseURL')
@@ -235,7 +306,7 @@ export function getModel(provider: ProviderId, modelId: string, config: Config):
         apiKey: providerConfig.apiKey || 'custom',
         baseURL: providerConfig.baseURL,
       })
-      return client(modelId)
+      return client.chat(modelId) as any
     }
     default:
       throw new Error(`Unknown provider: ${provider}`)
@@ -256,6 +327,8 @@ export function availableProviders(config: Config): ProviderId[] {
   if (config.providers.openrouter?.apiKey || process.env.OPENROUTER_API_KEY)
     available.push('openrouter')
   if (config.providers.groq?.apiKey || process.env.GROQ_API_KEY) available.push('groq')
+  if (config.providers['z-ai']?.apiKey || process.env.ZAI_API_KEY || process.env.Z_AI_API_KEY)
+    available.push('z-ai')
 
   // Ollama assumed available if running locally
   available.push('ollama')
