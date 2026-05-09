@@ -1,0 +1,96 @@
+{
+  "_comment": "Example asistenku config. Copy to ~/.asistenku/config.json and edit.",
+
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-5-20250929",
+  "theme": "auto",
+  "permissionMode": "ask",
+  "streamingEnabled": true,
+  "confirmDestructive": true,
+  "showTokenCount": true,
+  "showCost": true,
+  "autoMemory": false,
+  "autoCompactThreshold": 150000,
+
+  "providers": {
+    "anthropic": {
+      "id": "anthropic",
+      "name": "Anthropic Claude",
+      "apiKey": "sk-ant-api03-YOUR-KEY-HERE",
+      "defaultModel": "claude-sonnet-4-5-20250929"
+    },
+    "openai": {
+      "id": "openai",
+      "name": "OpenAI",
+      "apiKey": "sk-proj-YOUR-KEY-HERE",
+      "defaultModel": "gpt-5"
+    },
+    "google": {
+      "id": "google",
+      "name": "Google Gemini",
+      "apiKey": "AI-YOUR-KEY-HERE",
+      "defaultModel": "gemini-2.5-pro"
+    },
+    "ollama": {
+      "id": "ollama",
+      "name": "Ollama (local)",
+      "baseURL": "http://localhost:11434/v1",
+      "defaultModel": "llama3.3:70b"
+    }
+  },
+
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/workspace"]
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  },
+
+  "hooks": [
+    {
+      "event": "post-tool",
+      "matcher": "write_file|edit_file",
+      "command": "prettier --write $(echo $1 | jq -r .args.path)",
+      "blocking": false
+    },
+    {
+      "event": "pre-tool",
+      "matcher": "bash",
+      "command": "~/.asistenku/hooks/audit-bash.sh",
+      "blocking": true
+    }
+  ],
+
+  "telegram": {
+    "enabled": false,
+    "token": "YOUR_BOT_TOKEN_FROM_BOTFATHER",
+    "chatId": "YOUR_CHAT_ID",
+    "cwd": "/home/user/projects/default",
+    "provider": "anthropic",
+    "model": "claude-3-5-haiku-20241022"
+  },
+
+  "sync": {
+    "enabled": false,
+    "remote": "user@vps.example.com:/backups/asistenku",
+    "direction": "push",
+    "interval": 300,
+    "debounceMs": 2000,
+    "sshKey": "~/.ssh/id_ed25519",
+    "exclude": ["*.db-journal", "*.db-wal", "*.db-shm", "*.lock"]
+  },
+
+  "_examples": {
+    "permissionMode_options": ["ask", "auto", "yolo", "read-only"],
+    "theme_options": ["light", "dark", "auto"]
+  }
+}
