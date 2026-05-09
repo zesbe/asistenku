@@ -10,6 +10,7 @@ import { saveGlobalConfig, saveProjectConfig } from '../utils/config'
 import { initProjectMemory, readProjectMemory, readGlobalMemory, GLOBAL_MEMORY_FILE, PROJECT_MEMORY_FILE } from '../agent/memory'
 import { listPermissionRules, clearPermissionRules } from '../agent/permissions'
 import { addTodo, listTodos, completeTodo, removeTodo } from '../db/todos'
+import { phase2Commands } from './phase2'
 
 export interface CommandContext {
   session: Session
@@ -343,6 +344,9 @@ Messages: ${session.messageCount}`,
     },
   },
 ]
+
+// Merge phase 2 commands
+slashCommands.push(...phase2Commands)
 
 export function isSlashCommand(text: string): boolean {
   return text.startsWith('/')

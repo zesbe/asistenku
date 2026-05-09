@@ -1,6 +1,6 @@
 {
   "name": "asistenku",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Asistenku — multi-provider AI coding CLI dengan file-based memory, open source, bikinan anak Indonesia 🇮🇩",
   "type": "module",
   "module": "src/index.ts",

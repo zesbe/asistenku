@@ -368,7 +368,11 @@ registerTool({
  * Initialize all built-in tools
  */
 export function initBuiltinTools() {
-  // Tools are auto-registered via imports above
+  // Core tools auto-registered via imports above
+  // Phase 2 tools load on demand
+  import('./phase2').catch((err) => {
+    console.error('Failed to load phase2 tools:', err.message)
+  })
   return tools.size
 }
 
